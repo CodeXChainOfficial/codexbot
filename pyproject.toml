@@ -2,12 +2,14 @@
 name = "codex-bot"
 version = "0.1.0"
 description = ""
-authors = ["Jason Galvin <jasongalvin@gmail.com>"]
+authors = ["CodeX"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
 
+[tool.poetry.scripts]
+start-bot = "codex_bot.bot:main"
 
 [build-system]
 requires = ["poetry-core"]

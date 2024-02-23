@@ -8,34 +8,21 @@ Codex Bot
 
 ### Prerequisites
 
-Before you begin, ensure you have met the following requirements:
-
 - Python 3.8 or higher
 - Poetry for dependency management
 
-### Installation
+### Install and run the bot
 
-1. Clone the repository
-
-```bash
-git clone https://github.com/codeXChainOfficial/codex-bot.git
-cd codex-bot
-```
-
-2. Install dependencies with Poetry
-
-```bash
-poetry install
-```
-
-3. Create a `.env` file in the root of the project and add the following environment variables
+Create `.env` file in the root of the project and add environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-4. Run the bot
+Run the bot
 
 ```bash
-poetry run python codex-bot
+poetry shell
+poetry install
+poetry run start-bot
 ```
