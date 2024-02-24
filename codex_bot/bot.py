@@ -24,6 +24,7 @@ load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+SCAN2CODE_WS_URL = os.getenv("SCAN2CODE_WS_URL")
 
 # Initialize logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -55,7 +56,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'accessCode': None
     })
 
-    uri = "ws://127.0.0.1:7001/generate-code"
+    uri = SCAN2CODE_WS_URL + "/generate-code"
     async with websockets.connect(uri) as websocket:
         await websocket.send(message)
         print(f"> Sent: {message}")
