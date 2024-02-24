@@ -77,9 +77,11 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 print(f"< Received another: {response}")
                 response_json = json.loads(response)
                 if "type" in response_json and response_json["type"] == "setCode":
-                  await update.message.reply_text(f'Received this code: {response_json}')
+                  await update.message.reply_text(f'Resulting code: {response_json["value"].replace("\n", "").replace("\\'", "'")}')
                 elif "type" in response_json and response_json["type"] == "status":
                   await update.message.reply_text(response_json["value"])
+                elif "type" in response_json and response_json["type"] == "error":
+                  await update.message.reply_text(f'Error: {response_json["value"]}')
         except websockets.exceptions.ConnectionClosed as e:
             print(f"WebSocket connection closed with error: {e}")
 
