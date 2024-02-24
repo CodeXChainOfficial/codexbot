@@ -60,11 +60,6 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await websocket.send(message)
         print(f"> Sent: {message}")
 
-        # Receive the response from the WebSocket server and send it to the user
-        response = await websocket.recv()
-        print(f"< Received: {response}")
-        await update.message.reply_text(f'Received from websocket: {response}')
-
         # Start the ping/pong health check in the background
         async def health_check():
             try:
@@ -82,6 +77,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 response_json = json.loads(response)
                 if "type" in response_json and response_json["type"] == "setCode":
                   await update.message.reply_text(f'Received this code: {response_json}')
+                elif "type" in response_json and response_json["type"] == "status":
+                  await update.message.reply_text(response_json["value"])
         except websockets.exceptions.ConnectionClosed as e:
             print(f"WebSocket connection closed with error: {e}")
 
