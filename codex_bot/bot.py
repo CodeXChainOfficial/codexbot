@@ -5,6 +5,7 @@ import os
 import json
 import asyncio
 import websockets
+import base64
 
 from dotenv import load_dotenv
 
@@ -30,15 +31,36 @@ logger = logging.getLogger(__name__)
 
 openai.api_key = OPENAI_API_KEY
 
-async def websockets_message_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start_upload(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Please upload an image to scan and convert to code.')
+
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    photo = update.message.photo[-1]  # Get the largest photo size
+    photo_file = await context.bot.get_file(photo.file_id)
+
+    # Download the photo and convert it to Base64
+    photo_bytes = await photo_file.download_as_bytearray()
+    base64_encoded = base64.b64encode(photo_bytes).decode('utf-8')
+
+    # Prepare the message with the Base64-encoded image
+    message = json.dumps({
+        'generationType': 'create',
+        'image': f'data:image/jpeg;base64,{base64_encoded}',
+        'openAiBaseURL': None,
+        'screenshotOneApiKey': None,
+        'isImageGenerationEnabled': True,
+        'editorTheme': 'cobalt',
+        'generatedCodeConfig': 'react_tailwind',
+        'isTermOfServiceAccepted': True,
+        'accessCode': None
+    })
+
     uri = "ws://127.0.0.1:7001/generate-code"
     async with websockets.connect(uri) as websocket:
-        # Send the initial message
-        message = json.dumps({'generationType': 'create', 'image': 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAYGBgYHBgcICAcKCwoLCg8ODAwODxYQERAREBYiFRkVFRkVIh4kHhweJB42KiYmKjY+NDI0PkxERExfWl98fKcBBgYGBgcGBwgIBwoLCgsKDw4MDA4PFhAREBEQFiIVGRUVGRUiHiQeHB4kHjYqJiYqNj40MjQ+TERETF9aX3x8p//CABEIAsAFAAMBIgACEQEDEQH/xAAxAAEAAgMBAAAAAAAAAAAAAAAAAgMBBAUGAQEBAQEBAQAAAAAAAAAAAAAAAQIDBAX/', 'openAiBaseURL': None, 'screenshotOneApiKey': None, 'isImageGenerationEnabled': True, 'editorTheme': 'cobalt', 'generatedCodeConfig': 'react_tailwind', 'isTermOfServiceAccepted': True, 'accessCode': None})
         await websocket.send(message)
         print(f"> Sent: {message}")
 
-        # Receive the initial response
+        # Receive the response from the WebSocket server and send it to the user
         response = await websocket.recv()
         print(f"< Received: {response}")
         await update.message.reply_text(f'Received from websocket: {response}')
@@ -48,21 +70,16 @@ async def websockets_message_handle(update: Update, context: ContextTypes.DEFAUL
             try:
                 while True:
                     await websocket.ping()
-                    await asyncio.sleep(10)  # Send a ping every 10 seconds, adjust as needed
+                    await asyncio.sleep(10)  # Send a ping every 10 seconds
             except websockets.exceptions.ConnectionClosed:
                 print("WebSocket connection was closed.")
-
-        # Start the health check coroutine but do not wait for it here.
-        # Instead, continue to listen for messages.
         asyncio.create_task(health_check())
 
-        # Wait for another message, this part depends on your use case.
-        # You might want to loop here to keep receiving messages.
         try:
             while True:
                 response = await websocket.recv()
                 print(f"< Received another: {response}")
-                response_json = json.loads(response)  # Parse the response as JSON
+                response_json = json.loads(response)
                 if "type" in response_json and response_json["type"] == "setCode":
                   await update.message.reply_text(f'Received this code: {response_json}')
         except websockets.exceptions.ConnectionClosed as e:
@@ -102,7 +119,8 @@ def run_bot() -> None:
     )
 
     application.add_handler(CommandHandler("start", start_handle))
-    application.add_handler(CommandHandler("wsmessage", websockets_message_handle))
+    application.add_handler(CommandHandler("scan", start_upload))
+    application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handle))
     application.add_error_handler(error_handle)
 
