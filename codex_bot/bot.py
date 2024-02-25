@@ -6,6 +6,7 @@ import json
 import asyncio
 import websockets
 import base64
+import html
 
 from dotenv import load_dotenv
 
@@ -77,11 +78,12 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 print(f"< Received another: {response}")
                 response_json = json.loads(response)
                 if "type" in response_json and response_json["type"] == "setCode":
-                  await update.message.reply_text(f'Resulting code: {response_json["value"].replace("\n", "").replace("\\'", "'")}')
+                    safe_html_value = html.escape(response_json["value"])
+                    await update.message.reply_text(f'Resulting code: {safe_html_value}')
                 elif "type" in response_json and response_json["type"] == "status":
-                  await update.message.reply_text(response_json["value"])
+                    await update.message.reply_text(response_json["value"])
                 elif "type" in response_json and response_json["type"] == "error":
-                  await update.message.reply_text(f'Error: {response_json["value"]}')
+                    await update.message.reply_text(f'Error: {response_json["value"]}')
         except websockets.exceptions.ConnectionClosed as e:
             print(f"WebSocket connection closed with error: {e}")
 
