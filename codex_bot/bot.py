@@ -36,6 +36,10 @@ openai.api_key = OPENAI_API_KEY
 async def start_upload(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Please upload an image to scan and convert to code.')
 
+def escape_markdown_v2(text):
+    escape_chars = '_*[]()~`>#+-=|{}.!'
+    return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
+
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo = update.message.photo[-1]  # Get the largest photo size
     photo_file = await context.bot.get_file(photo.file_id)
@@ -78,7 +82,11 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 print(f"< Received another: {response}")
                 response_json = json.loads(response)
                 if "type" in response_json and response_json["type"] == "setCode":
-                    await update.message.reply_text(f'Resulting code:\n\n{response_json["value"]}')
+                    escaped_code = escape_markdown_v2(response_json["value"])
+                    await update.message.reply_text(
+                        f'Resulting code:\n\n```\n{escaped_code}\n```',
+                        parse_mode='MarkdownV2'
+                    )
                 elif "type" in response_json and response_json["type"] == "status":
                     await update.message.reply_text(response_json["value"])
                 elif "type" in response_json and response_json["type"] == "error":
