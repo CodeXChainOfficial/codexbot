@@ -6,7 +6,7 @@ import json
 import asyncio
 import websockets
 import base64
-import html
+import aiohttp
 
 from dotenv import load_dotenv
 
@@ -117,6 +117,31 @@ async def message_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         parse_mode=ParseMode.HTML
     )
 
+async def start_describing(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_message = update.message.text
+    url = 'http://localhost:3000/components/new/description'
+    data = {
+        'framework': 'react',
+        'components': 'flowbite',
+        'icons': 'lucide',
+        'description': 'Pagination control',
+        'json': False
+    }
+    headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, data=json.dumps(data), headers=headers) as response:
+            if response.status == 200:
+                async for chunk in response.content.iter_chunked(256):
+                    if chunk:
+                        message_text = chunk.decode('utf-8')
+                        if message_text:
+                            await update.message.reply_text(message_text)
+            else:
+                print('Request failed: ', response.status)
+
 async def error_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(msg='Exception while handling an update:', exc_info=context.error)
 
@@ -129,6 +154,7 @@ def run_bot() -> None:
 
     application.add_handler(CommandHandler("start", start_handle))
     application.add_handler(CommandHandler("scan", start_upload))
+    application.add_handler(CommandHandler("describe", start_describing))
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handle))
     application.add_error_handler(error_handle)
