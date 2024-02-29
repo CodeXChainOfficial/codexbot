@@ -22,12 +22,14 @@ from telegram.ext import (
     CallbackContext,
 )
 from telegram.constants import ParseMode
+import re
 
 load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SCAN2CODE_WS_URL = os.getenv("SCAN2CODE_WS_URL")
+OPENV0_WEBAPP_URL = os.getenv("OPENV0_WEBAPP_URL")
 
 # Initialize logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -124,7 +126,7 @@ DESCRIPTION = range(1)
 # openv0
 async def prompt_for_description(update: Update, context: CallbackContext) -> int:
     await update.message.reply_text(
-        'Please describe the component you want built:'
+        'Please describe the component you want built with openv0:'
     )
     return DESCRIPTION
 
@@ -147,18 +149,36 @@ async def process_description(update: Update, context: ContextTypes.DEFAULT_TYPE
     processing_message = await update.message.reply_text('Processing your request, please wait...')
 
     full_response = ''  # Initialize an empty string to accumulate the chunks
+    last_component_name = ''  # Variable to hold the last component name
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, data=json.dumps(data), headers=headers) as response:
+        async with session.post(url, json=data, headers=headers) as response:
             if response.status == 200:
                 async for chunk in response.content.iter_chunked(512):
-                    if chunk:
-                        full_response += chunk.decode('utf-8')
-                # After receiving all chunks, format and send the entire response as one message
-                formatted_response = f'```\n{escape_markdown_v2(full_response)}\n```'  # Format as markdown code block
+                    full_response += chunk.decode('utf-8')
+
+                # Extract the last component name from the full_response
+                match = re.search(r'export default (\w+);', full_response)
+                if match:
+                    last_component_name = match.group(1)  # The component name is captured here
+
+                # Format the response message
+                formatted_response = '\n```' + escape_markdown_v2(full_response) + '```'
                 await processing_message.edit_text(formatted_response, parse_mode='MarkdownV2')
+
+                # Send the last component name as a clickable link
+                if last_component_name:
+                    link_message = 'View your component: <a href="' + OPENV0_WEBAPP_URL + '/view/' + last_component_name + '">' + last_component_name + '</a>'
+                    await link_to_component(update, context, link_message)
             else:
                 await update.message.reply_text('Failed to process your request.')
-    await fetch_components(update, context)
+
+# Note:  Telegram won't let us link a localhost hyperlink to a message, so the link will not work on local machine
+async def link_to_component(update: Update, context: CallbackContext, link_message: str) -> None:
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=link_message,
+        parse_mode=ParseMode.HTML
+    )
 
 # openv0
 async def fetch_components(update: Update, context: CallbackContext) -> None:
@@ -168,8 +188,9 @@ async def fetch_components(update: Update, context: CallbackContext) -> None:
             if response.status == 200:
                 data = await response.json()
                 components_list = data.get('items', [])
-                message_text = "List of components:\n" + '\n'.join([f"{comp['name']} - Latest: {comp['latest']}" for comp in components_list])
-                await update.message.reply_text(message_text)
+                # Create HTML links for each component
+                message_text = "List of components:\n" + '\n'.join([f'<a href="{OPENV0_WEBAPP_URL}/view/{comp["name"]}">{comp["name"]}</a>' for comp in components_list])
+                await update.message.reply_text(message_text, parse_mode='MarkdownV2')
             else:
                 await update.message.reply_text('Failed to fetch components.')
 
