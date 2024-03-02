@@ -24,6 +24,23 @@ from telegram.ext import (
 from telegram.constants import ParseMode
 import re
 
+import threading
+from prometheus_client import start_http_server, Counter
+
+# Define a counter with a label for user_id
+ACTIONS_COUNTER = Counter('codex_bot_user_actions', 'Total number of user actions', ['action', 'user_id'])
+
+def start_prometheus_server():
+    start_http_server(8000)  # Start Prometheus client on port 8000
+
+# Run the Prometheus server in a separate thread
+prometheus_thread = threading.Thread(target=start_prometheus_server)
+prometheus_thread.start()
+
+# Prometheus action counter
+def track_action(action, user_id):
+    ACTIONS_COUNTER.labels(action=action, user_id=str(user_id)).inc()
+
 load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -45,6 +62,7 @@ def escape_markdown_v2(text):
     return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    track_action('codex-bot scan2code', update.effective_user.username)
     photo = update.message.photo[-1]  # Get the largest photo size
     photo_file = await context.bot.get_file(photo.file_id)
 
@@ -100,6 +118,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def start_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    track_action('codex-bot start', user.username)
     await context.bot.send_message(
         chat_id=user.id,
         text=f"Hi {user.first_name}! I am the CodeX bot. Send me a message and I will respond.",
@@ -133,6 +152,7 @@ async def prompt_for_description(update: Update, context: CallbackContext) -> in
 # openv0
 async def process_description(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_message = update.message.text
+    track_action('codex-bot openv0', update.effective_user.username)
     url = 'http://localhost:3000/components/new/description'
     data = {
         'framework': 'react',
