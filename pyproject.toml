@@ -12,6 +12,7 @@ python-telegram-bot = "^20.8"
 python-dotenv = "^1.0.1"
 websockets = "^12.0"
 aiohttp = "^3.9.3"
+async-timeout = "^4.0.3"
 
 [tool.poetry.scripts]
 start-bot = "codex_bot.bot:main"

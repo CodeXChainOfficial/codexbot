@@ -7,6 +7,8 @@ import asyncio
 import websockets
 import base64
 import aiohttp
+import requests
+
 
 from dotenv import load_dotenv
 
@@ -28,6 +30,8 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SCAN2CODE_WS_URL = os.getenv("SCAN2CODE_WS_URL")
+CMC_API_KEY = "d05c836c-157d-4d8b-8e81-23955726265e"
+
 
 # Initialize logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -96,13 +100,152 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except websockets.exceptions.ConnectionClosed as e:
             print(f"WebSocket connection closed with error: {e}")
 
-async def start_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+    
+async def start_staking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     await context.bot.send_message(
         chat_id=user.id,
-        text=f"Hi {user.first_name}! I am the CodeX bot. Send me a message and I will respond.",
+        text=f"Hi {user.first_name}! You can stake CDX token on https://staking.codexchain.xyz/",
         parse_mode=ParseMode.HTML
     )
+    
+async def start_buy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    await context.bot.send_message(
+        chat_id=user.id,
+        text=f"Hi {user.first_name}! You can buy CDX token on https://www.mexc.com/price/CDX?calculatorTab=trade&utm_source=mexc&utm_medium=markets&utm_campaign=marketsdetails or swap using USDT : https://pancakeswap.finance/info/v3/tokens/0x1c3ba6cf2676cc795db02a3b2093e5076f5f330e ",
+        parse_mode=ParseMode.HTML
+    )
+    
+async def start_website(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    await context.bot.send_message(
+        chat_id=user.id,
+        text=f"Hi {user.first_name}! You can find codex website on https://codexchain.xyz ",
+        parse_mode=ParseMode.HTML
+    )
+    
+async def start_link(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    await context.bot.send_message(
+        chat_id=user.id,
+        text=f"Hi {user.first_name}! You can find important links on: https://linktr.ee/codexchain ",
+        parse_mode=ParseMode.HTML
+    )
+    
+    
+async def start_tokenomics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = (
+        f"Hi {user.first_name}! You can find Codex Tokenomics and other related information at the following links:\n\n"
+        "Codex Tokenomics: [Tokenomics Spreadsheet](https://docs.google.com/spreadsheets/d/1YKgVow_sgBTQpoQJ9Eu1Zp3fhKByJdtI/edit#gid=172763834)\n"
+        "Tokens Information: [Token Information](https://drive.google.com/file/d/1A8cwF6tnQfZ_m--J3Y4yzqzeOWfqi-23/view?usp=sharing)\n"
+        "Company Wallet Addresses: [Wallet Document](https://docs.google.com/document/d/11nD-YbVIRsB_2CplL-EeKU4-fgXSVdMf0pB-lpHvzGo/edit)\n\n"
+        "We encourage you to review these documents thoroughly for transparency and peace of mind.\n"
+        "Additionally, for further transparency, we have provided links to BscScan where you can double-check and track each wallet's activity:\n"
+        "[BscScan Links](https://bscscan.com/token/tokenholderchart/0x1c3ba6cf2676cc795db02a3b2093e5076f5f330e)"
+    )
+    await context.bot.send_message(
+        chat_id=user.id,
+        text=message,
+        parse_mode=ParseMode.HTML
+    )
+
+    
+async def start_products(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = (
+        f"Hi {user.first_name}! Here are the available products:\n\n"
+        "Scan2code = [Scan2code](https://scan2code.codexchain.xyz/)\n"
+        "Token Gen = [Token Gen](https://products.codexchain.xyz/TokengeneratorERC)\n\n"
+        "Upcoming Products:\n"
+        "CodeXGPT\n"
+        "CodeXVision\n"
+        "CodeXArchitect"
+    )
+    await context.bot.send_message(
+        chat_id=user.id,
+        text=message,
+        parse_mode=ParseMode.HTML
+    )
+
+
+    
+async def start_command(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    available_commands = [
+        "Price",
+        "Buy",
+        "Website",
+        "Links",
+        "Tokenomics",
+        "Produtcs"
+    ]
+    commands_text = "\n".join(available_commands)
+
+    await context.bot.send_message(
+        chat_id=user.id,
+        text=f"Hi there! Welcome to the Codex Bot. How can I assist you today?\n\n"
+             f"Available commands:\n{commands_text}"
+    )
+
+    # Add all the other command handlers within the start_command function
+#    application.add_handler(CommandHandler("scan", start_upload))
+#    application.add_handler(CommandHandler("staking", start_staking))
+    application.add_handler(CommandHandler("price", start_price))
+    application.add_handler(CommandHandler("buy", start_buy))
+    application.add_handler(CommandHandler("website", start_website))
+    application.add_handler(CommandHandler("links", start_link))
+    application.add_handler(CommandHandler("tokenomics", start_tokenomics))
+    application.add_handler(CommandHandler("Products", start_products))
+
+    
+    
+async def start_price(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # Make a request to the CoinMarketCap API to fetch the current price of CDX token
+    url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?id=29177"
+    headers = {
+        "X-CMC_PRO_API_KEY": CMC_API_KEY
+    }
+    response = requests.get(url, headers=headers)
+    
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Extract the data from the API response
+        data = response.json()
+        cdx_data = data["data"]["29177"]
+
+        # Extract the required information from the response
+        price = cdx_data["quote"]["USD"]["price"]
+        fdv = cdx_data["quote"]["USD"]["fully_diluted_market_cap"]
+        circulating_supply = cdx_data["self_reported_circulating_supply"]
+        market_cap =price * circulating_supply
+
+        # Send the information as a message to the user
+        user = update.effective_user
+        message = (
+            f"Hi {user.first_name}!\n"
+            f"The current price of CDX token is ${price:.4f}\n"
+            f"Market Cap: ${market_cap}\n"
+            f"Fully Diluted Valuation (FDV): ${fdv}\n"
+            f"Circulating Supply: {circulating_supply}"
+        )
+
+        await context.bot.send_message(
+            chat_id=user.id,
+            text=message,
+            parse_mode=ParseMode.HTML
+        )
+    else:
+        # Handle API request failure
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Failed to fetch the price of CDX token from CoinMarketCap."
+        )
+
+
+
 
 async def message_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_message = update.message.text
@@ -195,8 +338,21 @@ def run_bot() -> None:
         fallbacks=[CommandHandler('cancel', cancel)],
     )
 
-    application.add_handler(CommandHandler("start", start_handle))
+    application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("scan", start_upload))
+    application.add_handler(CommandHandler("staking", start_staking))
+    application.add_handler(CommandHandler("price", start_price))
+    application.add_handler(CommandHandler("buy", start_buy))
+    application.add_handler(CommandHandler("website", start_website))
+    application.add_handler(CommandHandler("links", start_link))
+    application.add_handler(CommandHandler("tokenomics", start_tokenomics))
+    application.add_handler(CommandHandler("products", start_products))
+
+
+
+
+
+
     application.add_handler(openv0_conv_handler)
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handle))
