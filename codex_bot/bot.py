@@ -105,7 +105,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start_staking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     await context.bot.send_message(
-        chat_id=user.id,
+        chat_id=update.effective_chat.id,
         text=f"Hi {user.first_name}! You can stake CDX token on https://staking.codexchain.xyz/",
         parse_mode=ParseMode.HTML
     )
@@ -113,7 +113,7 @@ async def start_staking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 async def start_buy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     await context.bot.send_message(
-        chat_id=user.id,
+        chat_id=update.effective_chat.id,
         text=f"Hi {user.first_name}! You can buy CDX token on https://www.mexc.com/price/CDX?calculatorTab=trade&utm_source=mexc&utm_medium=markets&utm_campaign=marketsdetails or swap using USDT : https://pancakeswap.finance/info/v3/tokens/0x1c3ba6cf2676cc795db02a3b2093e5076f5f330e ",
         parse_mode=ParseMode.HTML
     )
@@ -121,7 +121,7 @@ async def start_buy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def start_website(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     await context.bot.send_message(
-        chat_id=user.id,
+        chat_id=update.effective_chat.id,
         text=f"Hi {user.first_name}! You can find codex website on https://codexchain.xyz ",
         parse_mode=ParseMode.HTML
     )
@@ -129,7 +129,7 @@ async def start_website(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 async def start_link(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     await context.bot.send_message(
-        chat_id=user.id,
+        chat_id=update.effective_chat.id,
         text=f"Hi {user.first_name}! You can find important links on: https://linktr.ee/codexchain ",
         parse_mode=ParseMode.HTML
     )
@@ -147,7 +147,7 @@ async def start_tokenomics(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         "[BscScan Links](https://bscscan.com/token/tokenholderchart/0x1c3ba6cf2676cc795db02a3b2093e5076f5f330e)"
     )
     await context.bot.send_message(
-        chat_id=user.id,
+        chat_id=update.effective_chat.id,
         text=message,
         parse_mode=ParseMode.HTML
     )
@@ -165,7 +165,7 @@ async def start_products(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         "CodeXArchitect"
     )
     await context.bot.send_message(
-        chat_id=user.id,
+        chat_id=update.effective_chat.id,
         text=message,
         parse_mode=ParseMode.HTML
     )
@@ -185,7 +185,7 @@ async def start_command(update: Update, context: CallbackContext) -> None:
     commands_text = "\n".join(available_commands)
 
     await context.bot.send_message(
-        chat_id=user.id,
+        chat_id=update.effective_chat.id,
         text=f"Hi there! Welcome to the Codex Bot. How can I assist you today?\n\n"
              f"Available commands:\n{commands_text}"
     )
@@ -233,7 +233,7 @@ async def start_price(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         )
 
         await context.bot.send_message(
-            chat_id=user.id,
+            chat_id=update.effective_chat.id,
             text=message,
             parse_mode=ParseMode.HTML
         )
@@ -330,13 +330,6 @@ def run_bot() -> None:
             .build()
     )
 
-    openv0_conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('describe', prompt_for_description)],
-        states={
-            DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, process_description)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)],
-    )
 
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("scan", start_upload))
@@ -348,16 +341,7 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("tokenomics", start_tokenomics))
     application.add_handler(CommandHandler("products", start_products))
 
-
-
-
-
-
-    application.add_handler(openv0_conv_handler)
-    application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handle))
-    application.add_error_handler(error_handle)
-
+    # Run the bot with polling
     application.run_polling()
 
 def main():
