@@ -1,14 +1,11 @@
 import logging
 from datetime import datetime
 import openai
-import os
 import json
 import asyncio
 import websockets
 import base64
 import aiohttp
-
-from dotenv import load_dotenv
 
 import telegram
 from telegram import Update
@@ -23,6 +20,8 @@ from telegram.ext import (
 )
 from telegram.constants import ParseMode
 import re
+
+import bot_config
 
 import threading
 from prometheus_client import start_http_server, Counter
@@ -41,18 +40,11 @@ prometheus_thread.start()
 def track_action(action, user_id):
     ACTIONS_COUNTER.labels(action=action, user_id=str(user_id)).inc()
 
-load_dotenv()
-
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-SCAN2CODE_WS_URL = os.getenv("SCAN2CODE_WS_URL")
-OPENV0_WEBAPP_URL = os.getenv("OPENV0_WEBAPP_URL")
-
 # Initialize logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-openai.api_key = OPENAI_API_KEY
+openai.api_key = bot_config.OPENAI_API_KEY
 
 async def start_upload(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Please upload an image to scan and convert to code.')
@@ -83,7 +75,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'accessCode': None
     })
 
-    uri = SCAN2CODE_WS_URL + "/generate-code"
+    uri = bot_config.SCAN2CODE_WS_URL + "/generate-code"
     async with websockets.connect(uri) as websocket:
         await websocket.send(message)
         print(f"> Sent: {message}")
@@ -187,7 +179,7 @@ async def process_description(update: Update, context: ContextTypes.DEFAULT_TYPE
 
                 # Send the last component name as a clickable link
                 if last_component_name:
-                    link_message = 'View your component: <a href="' + OPENV0_WEBAPP_URL + '/view/' + last_component_name + '">' + last_component_name + '</a>'
+                    link_message = 'View your component: <a href="' + bot_config.OPENV0_WEBAPP_URL + '/view/' + last_component_name + '">' + last_component_name + '</a>'
                     await link_to_component(update, context, link_message)
             else:
                 await update.message.reply_text('Failed to process your request.')
@@ -209,7 +201,7 @@ async def fetch_components(update: Update, context: CallbackContext) -> None:
                 data = await response.json()
                 components_list = data.get('items', [])
                 # Create HTML links for each component
-                message_text = "List of components:\n" + '\n'.join([f'<a href="{OPENV0_WEBAPP_URL}/view/{comp["name"]}">{comp["name"]}</a>' for comp in components_list])
+                message_text = "List of components:\n" + '\n'.join([f'<a href="{bot_config.OPENV0_WEBAPP_URL}/view/{comp["name"]}">{comp["name"]}</a>' for comp in components_list])
                 await update.message.reply_text(message_text, parse_mode='MarkdownV2')
             else:
                 await update.message.reply_text('Failed to fetch components.')
@@ -224,7 +216,7 @@ async def error_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 def run_bot() -> None:
     application = (
         ApplicationBuilder()
-            .token(TELEGRAM_BOT_TOKEN)
+            .token(bot_config.TELEGRAM_BOT_TOKEN)
             .build()
     )
 

@@ -154,3 +154,6 @@ cython_debug/
 
 # Temporary eval output
 evals_data
+
+.DS_Store
+**/.DS_Store
