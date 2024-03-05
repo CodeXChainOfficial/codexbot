@@ -133,6 +133,15 @@ async def start_link(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         text=f"Hi {user.first_name}! You can find important links on: https://linktr.ee/codexchain ",
         parse_mode=ParseMode.HTML
     )
+async def start_address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    contract_address = "0x1c3ba6cF2676cc795db02a3b2093E5076f5F330E"
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"Hi {user.first_name}! CodeX Smart Contract Address: <a href='tel:{contract_address}'>{contract_address}</a>",
+        parse_mode=ParseMode.HTML
+    )
+
     
     
 async def start_tokenomics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -180,6 +189,8 @@ async def start_command(update: Update, context: CallbackContext) -> None:
         "Website",
         "Links",
         "Tokenomics",
+        "Staking",
+        "ContractAddress",
         "Produtcs"
     ]
     commands_text = "\n".join(available_commands)
@@ -192,13 +203,15 @@ async def start_command(update: Update, context: CallbackContext) -> None:
 
     # Add all the other command handlers within the start_command function
 #    application.add_handler(CommandHandler("scan", start_upload))
-#    application.add_handler(CommandHandler("staking", start_staking))
+    application.add_handler(CommandHandler("staking", start_staking))
     application.add_handler(CommandHandler("price", start_price))
     application.add_handler(CommandHandler("buy", start_buy))
     application.add_handler(CommandHandler("website", start_website))
     application.add_handler(CommandHandler("links", start_link))
     application.add_handler(CommandHandler("tokenomics", start_tokenomics))
     application.add_handler(CommandHandler("Products", start_products))
+    application.add_handler(CommandHandler("ContractAddress", start_address))
+
 
     
     
@@ -340,6 +353,8 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("links", start_link))
     application.add_handler(CommandHandler("tokenomics", start_tokenomics))
     application.add_handler(CommandHandler("products", start_products))
+    application.add_handler(CommandHandler("ContractAddress", start_address))
+
 
     # Run the bot with polling
     application.run_polling()
