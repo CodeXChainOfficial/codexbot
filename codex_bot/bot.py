@@ -45,6 +45,9 @@ async def command_start_handler(message: Message):
         mk_b.adjust(1, )
         await message.answer(text='Choose wallet to connect', reply_markup=mk_b.as_markup())
 
+@dp.message(Command('chat'))
+async def chat_with_me(message: Message):
+    await message.answer(text='Chat with me, yay!')
 
 @dp.message(Command('transaction'))
 async def send_transaction(message: Message):
@@ -137,6 +140,8 @@ async def main_callback_handler(call: CallbackQuery):
         await send_transaction(message)
     elif data == 'disconnect':
         await disconnect_wallet(message)
+    elif data == 'chat':
+        await message.answer('Chat with me!')
     else:
         data = data.split(':')
         if data[0] == 'connect':

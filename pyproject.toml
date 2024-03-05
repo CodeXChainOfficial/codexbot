@@ -17,9 +17,11 @@ pytonconnect = "^0.3.0"
 qrcode = "^7.4.2"
 redis = "^5.0.2"
 aiogram = "^3.4.1"
+watchdog = "^4.0.0"
 
 [tool.poetry.scripts]
 start-bot = "codex_bot.bot:run"
+start-bot-dev = "codex_bot.auto_reload:main"
 
 [build-system]
 requires = ["poetry-core"]

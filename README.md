@@ -26,3 +26,9 @@ poetry shell
 poetry install
 poetry run start-bot
 ```
+
+Run the bot with auto-reload (for development)
+
+```bash
+poetry run start-bot-dev
+```
