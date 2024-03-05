@@ -2,6 +2,7 @@ import sys
 import logging
 import asyncio
 import time
+import openai
 from io import BytesIO
 import qrcode
 
@@ -25,8 +26,28 @@ logger = logging.getLogger(__file__)
 bot = Bot(config.TELEGRAM_TOKEN, parse_mode=ParseMode.HTML)
 dp = Dispatcher()
 
+openai.api_key = config.OPENAI_API_KEY
 
 @dp.message(CommandStart())
+@dp.message(Command('chat'))
+async def start_chatting(message: Message):
+    await message.answer(text=f"Hi {message.from_user.username}! I am the CodeX bot. Send me a message and I will respond.")
+    async def reply_to_user(message: Message):
+        response =  openai.completions.create(
+            model="gpt-3.5-turbo-instruct",
+            prompt=message.text,
+            max_tokens=150
+        )
+        if response.choices[0].text:
+            await message.answer(response.choices[0].text)
+        else:
+            await message.answer("no response")
+
+    @dp.message()
+    async def handle_message(message: Message):
+        await reply_to_user(message)
+
+@dp.message(Command('choose_wallet'))
 async def command_start_handler(message: Message):
     chat_id = message.chat.id
     connector = get_connector(chat_id)
@@ -44,10 +65,6 @@ async def command_start_handler(message: Message):
             mk_b.button(text=wallet['name'], callback_data=f'connect:{wallet["name"]}')
         mk_b.adjust(1, )
         await message.answer(text='Choose wallet to connect', reply_markup=mk_b.as_markup())
-
-@dp.message(Command('chat'))
-async def chat_with_me(message: Message):
-    await message.answer(text='Chat with me, yay!')
 
 @dp.message(Command('transaction'))
 async def send_transaction(message: Message):
@@ -135,13 +152,13 @@ async def main_callback_handler(call: CallbackQuery):
     message = call.message
     data = call.data
     if data == "start":
+        await start_chatting(message)
+    elif data == "choose_wallet":
         await command_start_handler(message)
     elif data == "send_tr":
         await send_transaction(message)
     elif data == 'disconnect':
         await disconnect_wallet(message)
-    elif data == 'chat':
-        await message.answer('Chat with me!')
     else:
         data = data.split(':')
         if data[0] == 'connect':
