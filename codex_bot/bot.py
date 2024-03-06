@@ -34,8 +34,8 @@ from eth_account import Account
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__file__)
 
-
-web3 = Web3(Web3.HTTPProvider("https://arbitrum-goerli.infura.io/v3/5f3224c8075b407fa38911977320235b"))
+RPC= "https://arbitrum-goerli.infura.io/v3/5f3224c8075b407fa38911977320235b"
+web3 = Web3(Web3.HTTPProvider(RPC))
 
 # Replace this with your actual private key
 private_key = '3c921f988ca214959ece9fdd941d8cf017679cd126835c8843fae9ea580c02f7'
