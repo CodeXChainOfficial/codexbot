@@ -3,8 +3,12 @@ import logging
 import asyncio
 import time
 import openai
-from io import BytesIO
 import qrcode
+import websockets
+import base64
+import json
+import io
+from io import BytesIO
 
 import pytonconnect.exceptions
 from pytoniq_core import Address
@@ -14,12 +18,12 @@ import config
 from codex_bot.messages import get_comment_message
 from codex_bot.connector import get_connector
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher, F, types
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery, BufferedInputFile
+from aiogram.types import Message, CallbackQuery, BufferedInputFile, ContentType
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-
+from aiogram.fsm.context import FSMContext
 
 logger = logging.getLogger(__file__)
 
@@ -27,6 +31,73 @@ bot = Bot(config.TELEGRAM_TOKEN, parse_mode=ParseMode.HTML)
 dp = Dispatcher()
 
 openai.api_key = config.OPENAI_API_KEY
+
+def escape_markdown_v2(text):
+    escape_chars = '_*[]()~`>#+-=|{}.!'
+    return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
+
+
+@dp.message(Command('scan'))
+async def scan_image(message: Message):
+    await message.answer(text='Please upload an image to scan and convert to code.')
+
+@dp.message(F.photo)
+async def photo_handler(message: types.Message, state: FSMContext):
+    base64_encoded = ''
+    image_buffer = io.BytesIO()
+    await bot.download(
+        message.photo[-1],
+        destination=image_buffer
+    )
+    base64_encoded = base64.b64encode(image_buffer.getvalue()).decode('utf-8')
+    print(f'Base64: {base64_encoded[:100]}...{base64_encoded[-100:]}')
+
+    # Prepare the message with the Base64-encoded image
+    messagedata = json.dumps({
+        'generationType': 'create',
+        'image': f'data:image/jpeg;base64,{base64_encoded}',
+        'openAiBaseURL': None,
+        'screenshotOneApiKey': None,
+        'isImageGenerationEnabled': True,
+        'editorTheme': 'cobalt',
+        'generatedCodeConfig': 'react_tailwind',
+        'isTermOfServiceAccepted': True,
+        'accessCode': None
+    })
+
+    uri = config.SCAN2CODE_WS_URL + "/generate-code"
+    async with websockets.connect(uri) as websocket:
+        await websocket.send(messagedata)
+        print(f"> Sent: {messagedata}")
+
+        # Start the ping/pong health check in the background
+        async def health_check():
+            try:
+                while True:
+                    await websocket.ping()
+                    await asyncio.sleep(10)
+            except websockets.exceptions.ConnectionClosed:
+                print("WebSocket connection was closed.")
+        asyncio.create_task(health_check())
+
+        try:
+            while True:
+                response = await websocket.recv()
+                print(f"< Received another: {response}")
+                response_json = json.loads(response)
+                if "type" in response_json and response_json["type"] == "setCode":
+                    escaped_code = escape_markdown_v2(response_json["value"])
+                    await message.reply(
+                        f'Resulting code:\n\n```\n{escaped_code}\n```',
+                        parse_mode='MarkdownV2'
+                    )
+                elif "type" in response_json and response_json["type"] == "status":
+                    await message.reply(response_json["value"])
+                elif "type" in response_json and response_json["type"] == "error":
+                    await message.reply(f'Error: {response_json["value"]}')
+        except websockets.exceptions.ConnectionClosed as e:
+            print(f"WebSocket connection closed with error: {e}")
+
 
 @dp.message(CommandStart())
 @dp.message(Command('chat'))
@@ -46,6 +117,7 @@ async def start_chatting(message: Message):
     @dp.message()
     async def handle_message(message: Message):
         await reply_to_user(message)
+
 
 @dp.message(Command('choose_wallet'))
 async def command_start_handler(message: Message):
