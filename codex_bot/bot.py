@@ -41,6 +41,7 @@ def escape_markdown_v2(text):
 async def scan_image(message: Message):
     await message.answer(text='Please upload an image to scan and convert to code.')
 
+
 @dp.message(F.photo)
 async def photo_handler(message: types.Message, state: FSMContext):
     base64_encoded = ''
@@ -83,43 +84,39 @@ async def photo_handler(message: types.Message, state: FSMContext):
         try:
             while True:
                 response = await websocket.recv()
-                print(f"< Received another: {response}")
+                # print(f"< Received another: {response}")
                 response_json = json.loads(response)
                 if "type" in response_json and response_json["type"] == "setCode":
                     escaped_code = escape_markdown_v2(response_json["value"])
-                    await message.reply(
+                    await message.answer(
                         f'Resulting code:\n\n```\n{escaped_code}\n```',
                         parse_mode='MarkdownV2'
                     )
                 elif "type" in response_json and response_json["type"] == "status":
-                    await message.reply(response_json["value"])
+                    await message.answer(response_json["value"])
                 elif "type" in response_json and response_json["type"] == "error":
-                    await message.reply(f'Error: {response_json["value"]}')
+                    await message.answer(f'Error: {response_json["value"]}')
         except websockets.exceptions.ConnectionClosed as e:
             print(f"WebSocket connection closed with error: {e}")
 
 
-@dp.message(CommandStart())
-@dp.message(Command('chat'))
+@dp.message(Command('gpt'))
 async def start_chatting(message: Message):
-    await message.answer(text=f"Hi {message.from_user.username}! I am the CodeX bot. Send me a message and I will respond.")
-    async def reply_to_user(message: Message):
-        response =  openai.completions.create(
-            model="gpt-3.5-turbo-instruct",
-            prompt=message.text,
-            max_tokens=150
-        )
-        if response.choices[0].text:
-            await message.answer(response.choices[0].text)
-        else:
-            await message.answer("no response")
-
-    @dp.message()
-    async def handle_message(message: Message):
-        await reply_to_user(message)
+    command_name = '/gpt'
+    message_text = message.text.replace(command_name, '', 1).strip()
+    # print(f"/gpt {message_text}")
+    response =  openai.completions.create(
+        model="gpt-3.5-turbo-instruct",
+        prompt=message_text,
+        max_tokens=150
+    )
+    if response.choices[0].text:
+        await message.answer(response.choices[0].text)
+    else:
+        await message.answer("no response")
 
 
-@dp.message(Command('choose_wallet'))
+@dp.message(CommandStart())
 async def command_start_handler(message: Message):
     chat_id = message.chat.id
     connector = get_connector(chat_id)
@@ -137,6 +134,7 @@ async def command_start_handler(message: Message):
             mk_b.button(text=wallet['name'], callback_data=f'connect:{wallet["name"]}')
         mk_b.adjust(1, )
         await message.answer(text='Choose wallet to connect', reply_markup=mk_b.as_markup())
+
 
 @dp.message(Command('transaction'))
 async def send_transaction(message: Message):
@@ -217,6 +215,10 @@ async def disconnect_wallet(message: Message):
     await connector.disconnect()
     await message.answer('You have been successfully disconnected!')
 
+@dp.message()
+async def catchall_handler(message: Message):
+    print('catchall_handler')
+    await message.answer("I'm sorry, I didn't understand that command.")
 
 @dp.callback_query(lambda call: True)
 async def main_callback_handler(call: CallbackQuery):
@@ -224,8 +226,6 @@ async def main_callback_handler(call: CallbackQuery):
     message = call.message
     data = call.data
     if data == "start":
-        await start_chatting(message)
-    elif data == "choose_wallet":
         await command_start_handler(message)
     elif data == "send_tr":
         await send_transaction(message)
