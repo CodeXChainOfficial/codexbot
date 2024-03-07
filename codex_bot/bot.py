@@ -46,18 +46,16 @@ account = Account.from_key(private_key)
 # Set the default account to the address derived from the private key
 web3.eth.defaultAccount = account.address
 
-if not web3.is_connected():  # Correct method name
+if not web3.is_connected():
     logger.error("Web3 failed to connect.")
 else:
     logger.info("Web3 connected successfully.")
-
 
 
 bot = Bot(config.TELEGRAM_TOKEN, parse_mode=ParseMode.HTML)
 dp = Dispatcher()
 
 openai.api_key = config.OPENAI_API_KEY
-
 
 
 @dp.message(Command('deploy'))
@@ -142,8 +140,6 @@ def escape_markdown_v2(text):
 @dp.message(Command('scan'))
 async def scan_image(message: Message):
     await message.answer(text='Please upload an image to scan and convert to code.')
-
-
 
 
 @dp.message(F.photo)
@@ -349,7 +345,6 @@ async def main() -> None:
 def run():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(main())
-
 
 
 if __name__ == "__main__":
